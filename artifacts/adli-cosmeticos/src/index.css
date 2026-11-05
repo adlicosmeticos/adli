@@ -1,0 +1,160 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;1,500;1,600&display=swap');
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@plugin "@tailwindcss/typography";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-card-border: hsl(var(--card-border));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-popover-border: hsl(var(--popover-border));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --font-sans: var(--app-font-sans);
+  --font-serif: var(--app-font-serif);
+  --font-mono: var(--app-font-mono);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+:root {
+  --button-outline: rgba(71, 50, 49, .14);
+  --badge-outline: rgba(71, 50, 49, .08);
+  --opaque-button-border-intensity: -8;
+  --elevate-1: rgba(116, 76, 74, .04);
+  --elevate-2: rgba(116, 76, 74, .08);
+  --background: 38 40% 96%;
+  --foreground: 18 21% 22%;
+  --border: 28 20% 84%;
+  --input: 28 20% 84%;
+  --card: 39 42% 98%;
+  --card-foreground: 18 21% 22%;
+  --card-border: 28 20% 86%;
+  --sidebar: 38 40% 96%;
+  --sidebar-foreground: 18 21% 22%;
+  --sidebar-border: 28 20% 84%;
+  --sidebar-primary: 349 63% 70%;
+  --sidebar-primary-foreground: 18 21% 22%;
+  --sidebar-accent: 34 26% 90%;
+  --sidebar-accent-foreground: 18 21% 22%;
+  --sidebar-ring: 349 63% 70%;
+  --popover: 39 42% 98%;
+  --popover-foreground: 18 21% 22%;
+  --popover-border: 28 20% 84%;
+  --primary: 349 63% 70%;
+  --primary-foreground: 18 23% 20%;
+  --secondary: 89 17% 36%;
+  --secondary-foreground: 38 40% 96%;
+  --muted: 35 27% 91%;
+  --muted-foreground: 20 10% 43%;
+  --accent: 11 44% 88%;
+  --accent-foreground: 18 21% 22%;
+  --destructive: 2 62% 48%;
+  --destructive-foreground: 39 42% 98%;
+  --chart-1: 349 63% 70%;
+  --chart-2: 89 17% 36%;
+  --chart-3: 29 42% 60%;
+  --chart-4: 18 21% 22%;
+  --chart-5: 11 44% 82%;
+  --app-font-sans: 'DM Sans', sans-serif;
+  --app-font-serif: 'Playfair Display', Georgia, serif;
+  --app-font-mono: 'DM Sans', sans-serif;
+  --radius: .7rem;
+  --shadow-2xs: 0 2px 8px rgba(77, 57, 48, .03);
+  --shadow-xs: 0 3px 12px rgba(77, 57, 48, .04);
+  --shadow-sm: 0 8px 24px rgba(77, 57, 48, .08);
+  --shadow: 0 12px 36px rgba(77, 57, 48, .09);
+  --shadow-md: 0 18px 48px rgba(77, 57, 48, .12);
+  --shadow-lg: 0 24px 65px rgba(77, 57, 48, .14);
+  --shadow-xl: 0 32px 90px rgba(77, 57, 48, .16);
+  --shadow-2xl: 0 40px 110px rgba(77, 57, 48, .2);
+  --tracking-normal: 0em;
+  --spacing: .25rem;
+}
+
+.dark {
+  --background: 18 21% 18%;
+  --foreground: 38 40% 96%;
+  --border: 18 12% 30%;
+  --input: 18 12% 30%;
+  --card: 18 19% 22%;
+  --card-foreground: 38 40% 96%;
+  --card-border: 18 12% 30%;
+  --sidebar: 18 21% 18%;
+  --sidebar-foreground: 38 40% 96%;
+  --sidebar-border: 18 12% 30%;
+  --sidebar-primary: 349 63% 70%;
+  --sidebar-primary-foreground: 18 21% 18%;
+  --sidebar-accent: 18 15% 28%;
+  --sidebar-accent-foreground: 38 40% 96%;
+  --sidebar-ring: 349 63% 70%;
+  --popover: 18 19% 22%;
+  --popover-foreground: 38 40% 96%;
+  --popover-border: 18 12% 30%;
+  --primary: 349 63% 70%;
+  --primary-foreground: 18 21% 18%;
+  --secondary: 89 17% 54%;
+  --secondary-foreground: 18 21% 18%;
+  --muted: 18 15% 28%;
+  --muted-foreground: 28 13% 69%;
+  --accent: 11 29% 34%;
+  --accent-foreground: 38 40% 96%;
+  --destructive: 2 62% 55%;
+  --destructive-foreground: 38 40% 96%;
+  --chart-1: 349 63% 70%;
+  --chart-2: 89 30% 57%;
+  --chart-3: 29 52% 68%;
+  --chart-4: 11 44% 76%;
+  --chart-5: 18 15% 52%;
+}
+
+@layer base {
+  * { @apply border-border; }
+  html { scroll-behavior: smooth; }
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+    margin: 0;
+    min-width: 320px;
+  }
+  ::selection { background: #e9a0a2; color: #342c2a; }
+}
+
+:root { font-synthesis: none; text-rendering: optimizeLegibility; }
+.serif { font-family: var(--app-font-serif); }
+.site-shell { overflow: clip; }
+.topline { background: #718065; color: #faf5eb; }
+.nav-link { position: relative; }
+.nav-link::after { content: ''; position: absolute; left: 0; right: 100%; bottom: -5px; height: 1px; background: #9c685e; transition: right .25s ease; }
+.nav-link:hover::after, .nav-link:focus-visible::after { right: 0; }
+.hero-photo { animation: image-arrive .9s cubic-bezier(.22,.75,.22,1) both; }
+.rise-in { animation: rise-in .75s cubic-bezier(.22,.75,.22,1) both; }
+.delay-1 { animation-delay: .12s; }
+.delay-2 { animation-delay: .23s; }
+.delay-3 { animation-delay: .34s; }
+.botanical-ring { border: 1px solid rgba(113,128,101,.35); border-radius: 50%; }
+.contact-link { transition: color .2s ease, transform .2s ease; }
+.contact-link:hover { color: #9c685e; transform: translateX(3px); }
+@keyframes rise-in { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes image-arrive { from { opacity: .5; transform: scale(1.035); } to { opacity: 1; transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}

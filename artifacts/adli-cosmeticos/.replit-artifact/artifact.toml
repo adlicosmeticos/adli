@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Adli Lima Cosméticos"
+description = "Site institucional e vitrine online da Adli Lima Cosméticos, com apresentação da marca, informações de contato, pagamentos e atendimento pelo WhatsApp."
+version = "1.0.0"
+id = "artifacts/adli-cosmeticos"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 20842
+
+[services.development]
+run = "pnpm --filter @workspace/adli-cosmeticos run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/adli-cosmeticos", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/adli-cosmeticos/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "20842"
+BASE_PATH = "/"
