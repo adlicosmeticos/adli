@@ -336,60 +336,79 @@ export default function CartDrawer() {
                     </div>
                   </div>
 
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="block text-[10px] font-semibold text-[#8a7f76]">
-                        {customer.deliveryMethod === 'pickup' ? 'SEU ENDEREÇO / BAIRRO (CADASTRO)' : 'ENDEREÇO DE ENTREGA / BAIRRO'}
-                      </label>
-                    </div>
-                    <input
-                      type="text"
-                      value={customer.address}
-                      onChange={(e) => setCustomer({ ...customer, address: e.target.value })}
-                      placeholder="Rua, número, bairro..."
-                      className="w-full rounded-lg border border-[#e4dbcf] bg-[#faf8f4] px-3 py-2 text-xs focus:border-[#a66e68] focus:outline-none"
-                    />
-                  </div>
-
-                  {/* Botão de Localização Real / GPS */}
-                  <div className="space-y-1.5 pt-0.5">
-                    <button
-                      type="button"
-                      onClick={handleGetGPS}
-                      disabled={gettingLocation}
-                      className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#B68475] bg-[#FBFBFA] px-3 py-2 text-xs font-semibold text-[#966960] shadow-sm transition hover:bg-[#ECDDD8]/50 active:scale-95"
-                    >
-                      <MapPin size={15} className={gettingLocation ? 'animate-bounce text-[#966960]' : 'text-[#966960]'} />
-                      <span>
-                        {gettingLocation
-                          ? 'Acessando GPS do aparelho...'
-                          : customer.locationUrl
-                          ? 'Atualizar Localização GPS'
-                          : '📍 Enviar Localização Real (Ligar GPS)'}
-                      </span>
-                    </button>
-
-                    {customer.locationUrl && (
-                      <div className="flex items-center justify-between rounded-lg bg-[#ECDDD8]/70 px-3 py-1.5 text-[11px] text-[#614331]">
-                        <span className="flex items-center gap-1.5 font-medium text-[#614331]">
-                          <Check size={13} className="text-[#966960]" />
-                          GPS conectado ao pedido
-                        </span>
-                        <a
-                          href={customer.locationUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="font-bold text-[#966960] underline text-[10px]"
-                        >
-                          Ver no Maps
-                        </a>
+                  {/* Se for Entrega: solicita endereço e botão de GPS. Se for Retirada: esconde ambos */}
+                  {customer.deliveryMethod !== 'pickup' ? (
+                    <>
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="block text-[10px] font-semibold text-[#8a7f76]">
+                            ENDEREÇO DE ENTREGA / BAIRRO
+                          </label>
+                        </div>
+                        <input
+                          type="text"
+                          value={customer.address}
+                          onChange={(e) => setCustomer({ ...customer, address: e.target.value })}
+                          placeholder="Rua, número, bairro..."
+                          className="w-full rounded-lg border border-[#e4dbcf] bg-[#faf8f4] px-3 py-2 text-xs focus:border-[#a66e68] focus:outline-none"
+                        />
                       </div>
-                    )}
 
-                    {locationError && (
-                      <p className="text-[10px] text-red-600">{locationError}</p>
-                    )}
-                  </div>
+                      {/* Botão de Localização Real / GPS */}
+                      <div className="space-y-1.5 pt-0.5">
+                        <button
+                          type="button"
+                          onClick={handleGetGPS}
+                          disabled={gettingLocation}
+                          className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#B68475] bg-[#FBFBFA] px-3 py-2 text-xs font-semibold text-[#966960] shadow-sm transition hover:bg-[#ECDDD8]/50 active:scale-95"
+                        >
+                          <MapPin size={15} className={gettingLocation ? 'animate-bounce text-[#966960]' : 'text-[#966960]'} />
+                          <span>
+                            {gettingLocation
+                              ? 'Acessando GPS do aparelho...'
+                              : customer.locationUrl
+                              ? 'Atualizar Localização GPS'
+                              : '📍 Enviar Localização Real (Ligar GPS)'}
+                          </span>
+                        </button>
+
+                        {customer.locationUrl && (
+                          <div className="flex items-center justify-between rounded-lg bg-[#ECDDD8]/70 px-3 py-1.5 text-[11px] text-[#614331]">
+                            <span className="flex items-center gap-1.5 font-medium text-[#614331]">
+                              <Check size={13} className="text-[#966960]" />
+                              GPS conectado ao pedido
+                            </span>
+                            <a
+                              href={customer.locationUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="font-bold text-[#966960] underline text-[10px]"
+                            >
+                              Ver no Maps
+                            </a>
+                          </div>
+                        )}
+
+                        {locationError && (
+                          <p className="text-[10px] text-red-600">{locationError}</p>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    /* Card de Retirada na Loja (sem pedir endereço ou GPS) */
+                    <div className="rounded-xl border border-[#DCC4BD] bg-[#ECDDD8]/40 p-3 text-xs text-[#614331] space-y-1.5">
+                      <div className="flex items-center gap-1.5 font-bold text-[#966960]">
+                        <Store size={15} />
+                        <span>Retirada no Balcão da Loja</span>
+                      </div>
+                      <p className="text-[11px] text-[#614331]">
+                        <strong>Local de Retirada:</strong> {storeSettings.pickup_address}
+                      </p>
+                      <p className="text-[10px] text-[#927C75]">
+                        ✨ Não precisa preencher endereço nem localização. Seu pedido será separado e avisaremos no WhatsApp assim que estiver pronto para você retirar!
+                      </p>
+                    </div>
+                  )}
 
                   <div>
                     <label className="block text-[10px] font-semibold text-[#8a7f76] mb-1">
@@ -399,40 +418,45 @@ export default function CartDrawer() {
                       type="text"
                       value={customer.notes || ''}
                       onChange={(e) => setCustomer({ ...customer, notes: e.target.value })}
-                      placeholder="Alguma preferência ou instrução para a entrega?"
+                      placeholder={
+                        customer.deliveryMethod === 'pickup'
+                          ? 'Alguma observação sobre a retirada?'
+                          : 'Alguma preferência ou instrução para a entrega?'
+                      }
                       className="w-full rounded-lg border border-[#e4dbcf] bg-[#faf8f4] px-3 py-2 text-xs focus:border-[#a66e68] focus:outline-none"
                     />
                   </div>
 
                   {/* Informação do frete / retirada */}
-                  {isPickupActive ? (
+                  {customer.deliveryMethod === 'pickup' ? (
                     <div className="rounded-lg bg-[#ECDDD8]/50 p-2.5 text-[11px] text-[#614331] flex flex-col gap-1 border border-[#DCC4BD]">
                       <div className="flex items-center gap-1.5 font-bold text-[#966960]">
-                        {customer.deliveryMethod === 'pickup' ? <Store size={14} /> : <Truck size={14} />}
-                        <span>
-                          {customer.deliveryMethod === 'pickup'
-                            ? 'Retirada no Local: Grátis'
-                            : 'Entrega: Frete a combinar no WhatsApp'}
-                        </span>
+                        <Store size={14} />
+                        <span>Retirada no Local: Grátis (R$ 0,00)</span>
                       </div>
                       <p className="text-[10px] text-[#927C75]">
-                        {customer.deliveryMethod === 'pickup'
-                          ? `Local para retirada: ${storeSettings.pickup_address}`
-                          : 'Levamos apenas o valor dos produtos para o WhatsApp e calculamos o frete com você!'}
+                        Retirada no balcão: {storeSettings.pickup_address}
+                      </p>
+                    </div>
+                  ) : isParana ? (
+                    <div className="rounded-lg bg-[#ECDDD8]/50 p-2.5 text-[11px] text-[#614331] flex flex-col gap-1 border border-[#DCC4BD]">
+                      <div className="flex items-center gap-1.5 font-bold text-[#966960]">
+                        <Truck size={14} />
+                        <span>Entrega no Paraná: Frete Fixo de R$ 27,00</span>
+                      </div>
+                      <p className="text-[10px] text-[#927C75]">
+                        Valor fixo de frete para entrega em qualquer cidade do Paraná.
                       </p>
                     </div>
                   ) : (
-                    <div className="rounded-lg bg-[#ECDDD8]/50 p-2.5 text-[11px] text-[#614331] flex items-center gap-2 border border-[#DCC4BD]">
-                      <Truck size={14} className="shrink-0 text-[#966960]" />
-                      {shippingCents > 0 ? (
-                        <span>
-                          Entrega no Paraná: <strong>Frete Fixo de R$ 27,00</strong>
-                        </span>
-                      ) : (
-                        <span>
-                          Entrega: <strong>Cálculo do melhor frete no WhatsApp</strong>
-                        </span>
-                      )}
+                    <div className="rounded-lg bg-[#ECDDD8]/50 p-2.5 text-[11px] text-[#614331] flex flex-col gap-1 border border-[#DCC4BD]">
+                      <div className="flex items-center gap-1.5 font-bold text-[#966960]">
+                        <Truck size={14} />
+                        <span>Demais Estados: Frete a calcular no WhatsApp</span>
+                      </div>
+                      <p className="text-[10px] text-[#927C75]">
+                        O valor do frete será calculado pela loja via WhatsApp após o envio do pedido.
+                      </p>
                     </div>
                   )}
                 </div>
@@ -458,19 +482,23 @@ export default function CartDrawer() {
 
                 <div className="flex justify-between">
                   <span>Frete</span>
-                  <span>
-                    {shippingCents > 0
-                      ? formatPrice(shippingCents)
-                      : isPickupActive
-                      ? customer.deliveryMethod === 'pickup'
-                        ? 'Grátis (Retirada)'
-                        : 'A calcular via WhatsApp'
-                      : 'A calcular'}
+                  <span className={isParana && customer.deliveryMethod !== 'pickup' ? 'font-bold text-[#614331]' : ''}>
+                    {customer.deliveryMethod === 'pickup'
+                      ? 'Grátis (Retirada)'
+                      : isParana
+                      ? 'R$ 27,00 (Fixo PR)'
+                      : 'A calcular via WhatsApp'}
                   </span>
                 </div>
 
                 <div className="flex justify-between border-t border-[#DCC4BD] pt-2 text-sm font-bold text-[#614331]">
-                  <span>{shippingCents > 0 ? 'Total Estimado' : 'Total dos Produtos'}</span>
+                  <span>
+                    {customer.deliveryMethod === 'pickup'
+                      ? 'Total (Retirada)'
+                      : isParana
+                      ? 'Total Estimado'
+                      : 'Total dos Produtos'}
+                  </span>
                   <span className="text-base text-[#966960]">{formatPrice(totalCents)}</span>
                 </div>
               </div>

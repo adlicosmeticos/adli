@@ -261,17 +261,19 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  // Shipping calculation
+  // Shipping calculation:
+  // Se for retirada: grátis (R$ 0,00)
+  // Se for entrega no Paraná (PR): Frete Fixo de R$ 27,00
+  // Se for entrega em demais estados: A calcular no WhatsApp (R$ 0,00 adicionado)
   const isPickupActive = storeSettings.pickup_enabled !== false;
+  const isPickup = isPickupActive && customer.deliveryMethod === 'pickup';
 
   const isParana =
     customer.state.trim().toUpperCase() === 'PR' ||
     customer.state.trim().toLowerCase().includes('paraná') ||
     customer.state.trim().toLowerCase().includes('parana');
 
-  // Se a retirada no local estiver ativa, NÃO adiciona frete automaticamente (leva apenas preço dos produtos)
-  // Caso a retirada esteja desativada e frete fixo esteja ligado, cobra R$ 27 para PR
-  const shippingCents = (!isPickupActive && storeSettings.fixed_shipping_enabled && isParana) ? 2700 : 0;
+  const shippingCents = (!isPickup && isParana) ? 2700 : 0;
   const totalCents = Math.max(0, subtotalCents - discountCents + shippingCents);
 
   // WhatsApp message builder
@@ -282,15 +284,20 @@ export function CartProvider({ children }: { children: ReactNode }) {
     // Customer info
     msg += `👤 *Cliente:* ${customer.name || 'Não informado'}\n`;
     msg += `📍 *Cidade / Estado:* ${customer.city || 'Paranavaí'} - ${customer.state || 'PR'}\n`;
-    if (customer.address) {
-      msg += `🏠 *Endereço:* ${customer.address}\n`;
+
+    if (customer.deliveryMethod === 'pickup') {
+      msg += `📦 *Modalidade:* 🏪 Retirada no Local (Grátis)\n`;
+      msg += `🏬 *Local da Loja:* ${storeSettings.pickup_address}\n`;
+    } else {
+      msg += `📦 *Modalidade:* 🚚 Entrega no Endereço\n`;
+      if (customer.address) {
+        msg += `🏠 *Endereço:* ${customer.address}\n`;
+      }
+      if (customer.locationUrl) {
+        msg += `📍 *Localização GPS (Google Maps):* ${customer.locationUrl}\n`;
+      }
     }
-    if (customer.locationUrl) {
-      msg += `📍 *Localização GPS (Google Maps):* ${customer.locationUrl}\n`;
-    }
-    if (customer.deliveryMethod) {
-      msg += `📦 *Modalidade:* ${customer.deliveryMethod === 'pickup' ? 'Retirada no Local' : 'Entrega no Endereço'}\n`;
-    }
+
     if (customer.notes) {
       msg += `📝 *Observação:* ${customer.notes}\n`;
     }
@@ -313,15 +320,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
       msg += `🎟️ Cupom (${appliedCoupon.code}): -R$ ${(discountCents / 100).toFixed(2).replace('.', ',')} (${descVal})\n`;
     }
 
-    if (shippingCents > 0) {
+    if (isPickup) {
+      msg += `🚚 Frete: Grátis (Retirada no Local)\n`;
+      msg += `*TOTAL ESTIMADO: R$ ${(totalCents / 100).toFixed(2).replace('.', ',')}*\n`;
+    } else if (isParana) {
       msg += `🚚 Frete Fixo (Paraná): R$ 27,00\n`;
       msg += `*TOTAL ESTIMADO: R$ ${(totalCents / 100).toFixed(2).replace('.', ',')}*\n`;
-    } else if (isPickupActive) {
-      msg += `🚚 Frete: A calcular via WhatsApp (ou Retirada no Local)\n`;
-      msg += `*TOTAL DOS PRODUTOS: R$ ${(totalCents / 100).toFixed(2).replace('.', ',')}*\n`;
     } else {
-      msg += `🚚 Frete: A calcular via WhatsApp\n`;
-      msg += `*TOTAL ESTIMADO: R$ ${(totalCents / 100).toFixed(2).replace('.', ',')}*\n`;
+      msg += `🚚 Frete (Demais Estados): A calcular via WhatsApp\n`;
+      msg += `*TOTAL DOS PRODUTOS: R$ ${(totalCents / 100).toFixed(2).replace('.', ',')}*\n`;
     }
 
     msg += `───────────────\n\n`;
