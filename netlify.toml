@@ -1,0 +1,9 @@
+[build]
+  base = "artifacts/adli-cosmeticos"
+  command = "pnpm install && pnpm run build"
+  publish = "dist/public"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
