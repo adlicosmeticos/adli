@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: products
+    description: Product catalog and store management
 paths:
   /healthz:
     get:
@@ -24,6 +26,96 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /products:
+    get:
+      operationId: listProducts
+      tags: [products]
+      summary: List active products
+      responses:
+        "200":
+          description: Active products ordered for the storefront
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Product"
+  /admin/products:
+    get:
+      operationId: listAdminProducts
+      tags: [products]
+      summary: List all products for the store manager
+      responses:
+        "200":
+          description: All products
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Product"
+    post:
+      operationId: createProduct
+      tags: [products]
+      summary: Create a product
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductInput"
+      responses:
+        "201":
+          description: Created product
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+  /admin/products/{id}:
+    put:
+      operationId: updateProduct
+      tags: [products]
+      summary: Update a product
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductInput"
+      responses:
+        "200":
+          description: Updated product
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+        "404":
+          description: Product not found
+    delete:
+      operationId: deleteProduct
+      tags: [products]
+      summary: Delete a product
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deletion status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessStatus"
+        "404":
+          description: Product not found
 components:
   schemas:
     HealthStatus:
@@ -33,4 +125,93 @@ components:
           type: string
       required:
         - status
+    Product:
+      type: object
+      properties:
+        id:
+          type: integer
+        slug:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        priceCents:
+          type: integer
+        imageUrl:
+          type: string
+        category:
+          type: string
+        isActive:
+          type: boolean
+        isFeatured:
+          type: boolean
+        sortOrder:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - slug
+        - name
+        - description
+        - priceCents
+        - imageUrl
+        - category
+        - isActive
+        - isFeatured
+        - sortOrder
+        - createdAt
+        - updatedAt
+    ProductInput:
+      type: object
+      properties:
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 180
+        name:
+          type: string
+          minLength: 1
+          maxLength: 180
+        description:
+          type: string
+          maxLength: 2000
+        priceCents:
+          type: integer
+          minimum: 0
+        imageUrl:
+          type: string
+          maxLength: 1000
+        category:
+          type: string
+          minLength: 1
+          maxLength: 80
+        isActive:
+          type: boolean
+        isFeatured:
+          type: boolean
+        sortOrder:
+          type: integer
+      required:
+        - slug
+        - name
+        - description
+        - priceCents
+        - imageUrl
+        - category
+        - isActive
+        - isFeatured
+        - sortOrder
+    SuccessStatus:
+      type: object
+      properties:
+        success:
+          type: boolean
+      required:
+        - success
 
