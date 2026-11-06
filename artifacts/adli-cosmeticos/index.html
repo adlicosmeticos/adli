@@ -21,9 +21,25 @@
     <link rel="apple-touch-icon" href="/adli-logo-tab.png?v=2" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <style>
+      #nl-badge-frame,
+      #nl-hud-frame,
+      iframe[src*="netlify"],
+      iframe[id*="nl-"],
+      iframe[id*="netlify"] {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+        width: 0 !important;
+        height: 0 !important;
+        z-index: -9999 !important;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
+    <div id="nl-badge-frame" style="display:none !important"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
