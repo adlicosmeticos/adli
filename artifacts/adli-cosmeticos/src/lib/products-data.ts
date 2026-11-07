@@ -155,6 +155,14 @@ export function formatPrice(cents: number): string {
   return `R$ ${(cents / 100).toFixed(2).replace('.', ',')}`;
 }
 
+export function parseToCents(val: string): number {
+  if (!val) return 0;
+  const clean = val.replace(/[^\d.,]/g, '').replace(',', '.');
+  const num = parseFloat(clean);
+  if (isNaN(num) || num <= 0) return 0;
+  return Math.round(num * 100);
+}
+
 export function getWhatsAppLink(product?: Product): string {
   const base = 'https://wa.me/5544997303797?text=';
   if (!product) {

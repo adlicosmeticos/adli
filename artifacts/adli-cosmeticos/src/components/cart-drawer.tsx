@@ -1,10 +1,13 @@
-import { useState, type FormEvent } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
+import { useLocation } from 'wouter';
 import {
+  Calculator,
   Check,
   ChevronRight,
   Compass,
   CreditCard,
   MapPin,
+  MessageCircle,
   Minus,
   Plus,
   ShoppingBag,
@@ -16,10 +19,10 @@ import {
   X,
 } from 'lucide-react';
 import { useCart } from '@/lib/cart-context';
-import { formatPrice } from '@/lib/products-data';
-import PaymentModal from '@/components/payment-modal';
+import { formatPrice, parseToCents } from '@/lib/products-data';
 
 export default function CartDrawer() {
+  const [, setLocation] = useLocation();
   const {
     items,
     isOpen,
@@ -33,6 +36,8 @@ export default function CartDrawer() {
     removeCoupon,
     discountCents,
     shippingCents,
+    customShippingCents,
+    setCustomShippingCents,
     totalCents,
     isParana,
     storeSettings,
@@ -40,6 +45,7 @@ export default function CartDrawer() {
     customer,
     setCustomer,
     generateWhatsAppUrl,
+    generateShippingQuoteWhatsAppUrl,
   } = useCart();
 
   const [couponCode, setCouponCode] = useState('');
@@ -47,7 +53,17 @@ export default function CartDrawer() {
   const [validationError, setValidationError] = useState('');
   const [gettingLocation, setGettingLocation] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
-  const [isPaymentOpen, setIsPaymentOpen] = useState(false);
+  const [drawerShippingInput, setDrawerShippingInput] = useState(
+    customShippingCents > 0 ? (customShippingCents / 100).toFixed(2).replace('.', ',') : ''
+  );
+
+  useEffect(() => {
+    if (customShippingCents > 0) {
+      setDrawerShippingInput((customShippingCents / 100).toFixed(2).replace('.', ','));
+    } else {
+      setDrawerShippingInput('');
+    }
+  }, [customShippingCents]);
 
   if (!isOpen) return null;
 
@@ -97,7 +113,8 @@ export default function CartDrawer() {
       return;
     }
     setValidationError('');
-    setIsPaymentOpen(true);
+    setIsOpen(false);
+    setLocation('/pagamento');
   }
 
   return (
@@ -451,14 +468,90 @@ export default function CartDrawer() {
                       </p>
                     </div>
                   ) : (
-                    <div className="rounded-lg bg-[#ECDDD8]/50 p-2.5 text-[11px] text-[#614331] flex flex-col gap-1 border border-[#DCC4BD]">
-                      <div className="flex items-center gap-1.5 font-bold text-[#966960]">
-                        <Truck size={14} />
-                        <span>Demais Estados: Frete a calcular no WhatsApp</span>
+                    <div className="rounded-xl bg-[#ECDDD8]/50 p-3 text-[11px] text-[#614331] flex flex-col gap-2.5 border border-[#DCC4BD]">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5 font-bold text-[#966960]">
+                          <Truck size={15} />
+                          <span>Demais Estados: Frete a calcular</span>
+                        </div>
+                        {customShippingCents > 0 && (
+                          <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-bold text-green-800">
+                            Frete Somado
+                          </span>
+                        )}
                       </div>
-                      <p className="text-[10px] text-[#927C75]">
-                        O valor do frete será calculado pela loja via WhatsApp após o envio do pedido.
+
+                      <p className="text-[10px] text-[#927C75] leading-relaxed">
+                        Consulte o valor do frete para o seu CEP no WhatsApp antes de pagar. Ao receber o valor, adicione no campo abaixo para somar ao total.
                       </p>
+
+                      {/* Botão de Consulta no WhatsApp */}
+                      <a
+                        href={generateShippingQuoteWhatsAppUrl()}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex items-center justify-center gap-1.5 rounded-lg bg-[#25D366] py-2 px-3 text-xs font-bold text-white shadow-xs transition hover:bg-[#20ba59] active:scale-95"
+                      >
+                        <MessageCircle size={14} />
+                        <span>Consultar Frete no WhatsApp</span>
+                      </a>
+
+                      {/* Bloco Somar Frete */}
+                      <div className="rounded-lg bg-white p-2.5 border border-[#DCC4BD] space-y-2">
+                        <div className="flex items-center justify-between text-xs font-bold text-[#443a35]">
+                          <div className="flex items-center gap-1.5">
+                            <Calculator size={14} className="text-[#966960]" />
+                            <span>Somar o Frete ao Pedido</span>
+                          </div>
+                          {customShippingCents > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setCustomShippingCents(0);
+                                setDrawerShippingInput('');
+                              }}
+                              className="text-[10px] text-red-600 hover:underline"
+                            >
+                              Remover
+                            </button>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <div className="relative flex-1">
+                            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-[#927C75]">
+                              R$
+                            </span>
+                            <input
+                              type="text"
+                              value={drawerShippingInput}
+                              onChange={(e) => setDrawerShippingInput(e.target.value)}
+                              placeholder="Ex: 50,00"
+                              className="w-full rounded-lg border border-[#DCC4BD] bg-[#FAF8F4] py-1.5 pl-8 pr-2 text-xs font-semibold text-[#443a35] focus:border-[#966960] focus:outline-none"
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const cents = parseToCents(drawerShippingInput);
+                              setCustomShippingCents(cents);
+                            }}
+                            className="rounded-lg bg-[#966960] px-3 py-1.5 text-xs font-bold text-white transition hover:bg-[#B68475] shrink-0"
+                          >
+                            Somar
+                          </button>
+                        </div>
+
+                        {customShippingCents > 0 ? (
+                          <p className="text-[10px] font-semibold text-green-700">
+                            ✓ Frete de {formatPrice(customShippingCents)} somado ao valor total!
+                          </p>
+                        ) : (
+                          <p className="text-[10px] text-[#927C75]">
+                            Digite o valor informado pela loja e clique em <strong>Somar</strong>.
+                          </p>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -482,14 +575,26 @@ export default function CartDrawer() {
                   </div>
                 )}
 
-                <div className="flex justify-between">
+                <div className="flex justify-between items-center">
                   <span>Frete</span>
-                  <span className={isParana && customer.deliveryMethod !== 'pickup' ? 'font-bold text-[#614331]' : ''}>
-                    {customer.deliveryMethod === 'pickup'
-                      ? 'Grátis (Retirada)'
-                      : isParana
-                      ? 'R$ 27,00 (Fixo PR)'
-                      : 'A calcular via WhatsApp'}
+                  <span className={isParana || customShippingCents > 0 ? 'font-bold text-[#614331]' : ''}>
+                    {customer.deliveryMethod === 'pickup' ? (
+                      'Grátis (Retirada)'
+                    ) : isParana ? (
+                      'R$ 27,00 (Fixo PR)'
+                    ) : customShippingCents > 0 ? (
+                      `${formatPrice(customShippingCents)} (Consultado)`
+                    ) : (
+                      <a
+                        href={generateShippingQuoteWhatsAppUrl()}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 font-bold text-[#25D366] hover:underline cursor-pointer"
+                        title="Clique para consultar o frete no WhatsApp"
+                      >
+                        A calcular via WhatsApp ↗
+                      </a>
+                    )}
                   </span>
                 </div>
 
@@ -497,7 +602,7 @@ export default function CartDrawer() {
                   <span>
                     {customer.deliveryMethod === 'pickup'
                       ? 'Total (Retirada)'
-                      : isParana
+                      : isParana || customShippingCents > 0
                       ? 'Total Estimado'
                       : 'Total dos Produtos'}
                   </span>
@@ -525,21 +630,6 @@ export default function CartDrawer() {
           )}
         </div>
       </div>
-
-      {/* Modal / Tela de Pagamento */}
-      <PaymentModal
-        isOpen={isPaymentOpen}
-        onClose={() => setIsPaymentOpen(false)}
-        items={items}
-        subtotalCents={subtotalCents}
-        discountCents={discountCents}
-        shippingCents={shippingCents}
-        totalCents={totalCents}
-        appliedCoupon={appliedCoupon}
-        customer={customer}
-        isParana={isParana}
-        generateWhatsAppUrl={generateWhatsAppUrl}
-      />
     </div>
   );
 }

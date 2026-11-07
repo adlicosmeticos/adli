@@ -1,4 +1,4 @@
-import { useState, useRef, type ChangeEvent } from 'react';
+import { useState, useRef, useEffect, type ChangeEvent } from 'react';
 import {
   X,
   CreditCard,
@@ -15,9 +15,10 @@ import {
   Trash2,
   AlertCircle,
   CheckCircle2,
+  Calculator,
 } from 'lucide-react';
 import type { CartItem, CustomerInfo, Coupon } from '@/lib/cart-context';
-import { formatPrice } from '@/lib/products-data';
+import { formatPrice, parseToCents } from '@/lib/products-data';
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -26,11 +27,14 @@ interface PaymentModalProps {
   subtotalCents: number;
   discountCents: number;
   shippingCents: number;
+  customShippingCents: number;
+  setCustomShippingCents: (cents: number) => void;
   totalCents: number;
   appliedCoupon: Coupon | null;
   customer: CustomerInfo;
   isParana: boolean;
   generateWhatsAppUrl: () => string;
+  generateShippingQuoteWhatsAppUrl: () => string;
 }
 
 export default function PaymentModal({
@@ -40,15 +44,27 @@ export default function PaymentModal({
   subtotalCents,
   discountCents,
   shippingCents,
+  customShippingCents,
+  setCustomShippingCents,
   totalCents,
   appliedCoupon,
   customer,
   isParana,
+  generateShippingQuoteWhatsAppUrl,
 }: PaymentModalProps) {
   const [copiedPix, setCopiedPix] = useState(false);
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [shippingInput, setShippingInput] = useState(
+    customShippingCents > 0 ? (customShippingCents / 100).toFixed(2).replace('.', ',') : ''
+  );
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (customShippingCents > 0) {
+      setShippingInput((customShippingCents / 100).toFixed(2).replace('.', ','));
+    }
+  }, [customShippingCents]);
 
   if (!isOpen) return null;
 
@@ -89,6 +105,16 @@ export default function PaymentModal({
     }
   }
 
+  function handleApplyShipping() {
+    const cents = parseToCents(shippingInput);
+    setCustomShippingCents(cents);
+  }
+
+  function handleClearShipping() {
+    setCustomShippingCents(0);
+    setShippingInput('');
+  }
+
   function formatFileSize(bytes: number): string {
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -96,14 +122,14 @@ export default function PaymentModal({
   }
 
   function handleSendWhatsApp() {
+    if (!receiptFile) return;
+
     const phoneNumber = '5544997303797';
     let msg = `🌸 *NOVO PEDIDO — PAGAMENTO REALIZADO* 🌸\n`;
     msg += `*Adli Lima Cosméticos*\n\n`;
 
     msg += `✅ *STATUS:* PAGAMENTO EFETUADO COM SUCESSO\n`;
-    if (receiptFile) {
-      msg += `📎 *COMPROVANTE:* Arquivo "${receiptFile.name}" pronto para conferência\n`;
-    }
+    msg += `📎 *COMPROVANTE:* Arquivo "${receiptFile.name}" pronto para conferência\n`;
     msg += `\n`;
 
     msg += `👤 *Cliente:* ${customer.name || 'Não informado'}\n`;
@@ -146,6 +172,8 @@ export default function PaymentModal({
       msg += `🚚 Frete: Grátis (Retirada)\n`;
     } else if (isParana) {
       msg += `🚚 Frete Fixo (PR): R$ 27,00\n`;
+    } else if (customShippingCents > 0) {
+      msg += `🚚 Frete Consultado: ${formatPrice(customShippingCents)}\n`;
     } else {
       msg += `🚚 Frete (Demais Estados): A combinar\n`;
     }
@@ -222,7 +250,7 @@ export default function PaymentModal({
             </div>
 
             {/* Linhas de Valores */}
-            <div className="border-t border-[#F0E4E0] pt-2.5 space-y-1.5 text-xs text-[#927C75]">
+            <div className="border-t border-[#F0E4E0] pt-2.5 space-y-2 text-xs text-[#927C75]">
               <div className="flex justify-between">
                 <span>Subtotal</span>
                 <span>{formatPrice(subtotalCents)}</span>
@@ -235,17 +263,86 @@ export default function PaymentModal({
                 </div>
               )}
 
-              <div className="flex justify-between">
+              {/* Linha do Frete com link direto pro WhatsApp */}
+              <div className="flex justify-between items-center">
                 <span>Frete</span>
                 <span>
-                  {customer.deliveryMethod === 'pickup'
-                    ? 'Grátis (Retirada)'
-                    : isParana
-                    ? 'R$ 27,00 (Fixo PR)'
-                    : 'A calcular via WhatsApp'}
+                  {customer.deliveryMethod === 'pickup' ? (
+                    'Grátis (Retirada)'
+                  ) : isParana ? (
+                    <span className="font-bold text-[#614331]">R$ 27,00 (Fixo PR)</span>
+                  ) : customShippingCents > 0 ? (
+                    <span className="font-bold text-[#614331]">
+                      {formatPrice(customShippingCents)} (Consultado)
+                    </span>
+                  ) : (
+                    <a
+                      href={generateShippingQuoteWhatsAppUrl()}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 font-bold text-[#25D366] hover:underline cursor-pointer"
+                      title="Clique para consultar frete no WhatsApp"
+                    >
+                      A calcular via WhatsApp <ExternalLink size={12} />
+                    </a>
+                  )}
                 </span>
               </div>
 
+              {/* Quadradinho: Somar o Frete (para demais estados) */}
+              {!isParana && customer.deliveryMethod !== 'pickup' && (
+                <div className="rounded-xl border border-[#DCC4BD] bg-[#FAF8F5] p-3 space-y-2">
+                  <div className="flex items-center justify-between text-xs font-bold text-[#614331]">
+                    <div className="flex items-center gap-1.5">
+                      <Calculator size={14} className="text-[#966960]" />
+                      <span>Soma do Frete</span>
+                    </div>
+                    {customShippingCents > 0 && (
+                      <button
+                        type="button"
+                        onClick={handleClearShipping}
+                        className="text-[11px] font-semibold text-red-600 hover:underline"
+                      >
+                        Remover frete
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <div className="relative flex-1">
+                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-[#927C75]">
+                        R$
+                      </span>
+                      <input
+                        type="text"
+                        value={shippingInput}
+                        onChange={(e) => setShippingInput(e.target.value)}
+                        placeholder="Ex: 50,00"
+                        className="w-full rounded-lg border border-[#DCC4BD] bg-white py-1.5 pl-8 pr-2 text-xs font-semibold text-[#443a35] focus:border-[#966960] focus:outline-none"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleApplyShipping}
+                      className="rounded-lg bg-[#966960] px-3.5 py-1.5 text-xs font-bold text-white transition hover:bg-[#B68475] shrink-0 active:scale-95"
+                    >
+                      Somar Frete
+                    </button>
+                  </div>
+
+                  {customShippingCents > 0 ? (
+                    <p className="text-[10px] font-semibold text-green-700">
+                      ✓ Frete de {formatPrice(customShippingCents)} somado ao valor total!
+                    </p>
+                  ) : (
+                    <p className="text-[10px] text-[#927C75]">
+                      Coloque o valor que a loja te informou no WhatsApp e clique em <strong>Somar Frete</strong> para atualizar o total.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Valor Total a Pagar com o frete somado */}
               <div className="flex items-center justify-between rounded-lg bg-[#ECDDD8]/60 px-3 py-2 mt-2 border border-[#DCC4BD]">
                 <span className="text-xs font-bold text-[#614331]">Valor Total a Pagar:</span>
                 <span className="text-base font-extrabold text-[#966960]">
@@ -288,7 +385,7 @@ export default function PaymentModal({
                   onClick={handleOpenPaymentLink}
                   className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#966960] py-2.5 px-4 text-xs font-bold text-white shadow-sm transition hover:bg-[#B68475] active:scale-[0.99]"
                 >
-                  <span>Pagar com Cartão, Boleto ou Saldo</span>
+                  <span>Pagar com Cartão, Boleto ou Saldo ({formatPrice(totalCents)})</span>
                   <ExternalLink size={14} />
                 </button>
                 <p className="mt-1 text-center text-[10px] text-[#927C75]">
@@ -305,14 +402,9 @@ export default function PaymentModal({
                     <QrCode size={20} />
                   </div>
                   <div>
-                    <div className="flex items-center gap-2">
-                      <h4 className="text-sm font-bold text-[#443a35]">Pagar com Pix</h4>
-                      <span className="rounded-full bg-[#22c55e]/15 px-2 py-0.5 text-[9px] font-bold text-[#16a34a]">
-                        Aprovação Imediata
-                      </span>
-                    </div>
+                    <h4 className="text-sm font-bold text-[#443a35]">Pagar com Pix</h4>
                     <p className="text-[11px] text-[#927C75] mt-0.5">
-                      Copie a chave Pix CNPJ e pague pelo aplicativo do seu banco.
+                      Copie a chave Pix CNPJ e transfira o valor de <strong>{formatPrice(totalCents)}</strong>.
                     </p>
                   </div>
                 </div>
@@ -459,15 +551,26 @@ export default function PaymentModal({
               <button
                 type="button"
                 onClick={handleSendWhatsApp}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#25D366] py-3 px-4 text-xs font-bold text-white shadow-md transition hover:bg-[#20ba59] active:scale-[0.99]"
+                disabled={!receiptFile}
+                className={`flex w-full items-center justify-center gap-2 rounded-xl py-3 px-4 text-xs font-bold transition ${
+                  receiptFile
+                    ? 'bg-[#25D366] text-white shadow-md hover:bg-[#20ba59] active:scale-[0.99] cursor-pointer'
+                    : 'bg-[#e2dcda] text-[#9c8f8b] cursor-not-allowed shadow-none'
+                }`}
               >
                 <MessageCircle size={16} />
                 <span>CONFIRMAR PEDIDO E PAGAMENTO NO WHATSAPP</span>
               </button>
-              <p className="mt-1.5 text-center text-[10px] text-[#71645e] leading-snug">
-                {receiptFile
-                  ? '✨ Mensagem formatada com todos os itens e aviso de pagamento efetuado! Ao abrir o WhatsApp, anexe o print/PDF na conversa.'
-                  : 'A mensagem irá pronta com todos os itens, valores e o status de pagamento efetuado.'}
+              <p className="mt-1.5 text-center text-[10px] leading-snug">
+                {receiptFile ? (
+                  <span className="font-semibold text-green-700">
+                    ✨ Comprovante anexado! Ao abrir o WhatsApp, envie o print/PDF na conversa para confirmação imediata.
+                  </span>
+                ) : (
+                  <span className="text-[#927C75]">
+                    🔒 Carregue seu comprovante no campo acima para liberar este botão.
+                  </span>
+                )}
               </p>
             </div>
           </div>

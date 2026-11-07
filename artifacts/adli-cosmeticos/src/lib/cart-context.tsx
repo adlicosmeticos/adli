@@ -47,6 +47,8 @@ interface CartContextType {
   
   // Shipping & Total
   shippingCents: number;
+  customShippingCents: number;
+  setCustomShippingCents: (cents: number) => void;
   totalCents: number;
   isParana: boolean;
   storeSettings: StoreSettings;
@@ -58,6 +60,7 @@ interface CartContextType {
   
   // WhatsApp generator
   generateWhatsAppUrl: () => string;
+  generateShippingQuoteWhatsAppUrl: () => string;
 }
 
 const defaultCoupons: Coupon[] = [
@@ -91,6 +94,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
 
   const [storeSettings, setStoreSettings] = useState<StoreSettings>(getLocalStoreSettings);
+
+  const [customShippingCents, setCustomShippingCents] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('adli_custom_shipping');
+      return saved ? Number(saved) : 0;
+    } catch {
+      return 0;
+    }
+  });
 
   const [customer, setCustomer] = useState<CustomerInfo>(() => {
     try {
@@ -132,6 +144,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
       localStorage.setItem('adli_customer', JSON.stringify(customer));
     } catch {}
   }, [customer]);
+
+  // Sync customShippingCents to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('adli_custom_shipping', customShippingCents.toString());
+    } catch {}
+  }, [customShippingCents]);
 
   // Load store settings from Supabase or localStorage
   useEffect(() => {
@@ -273,8 +292,30 @@ export function CartProvider({ children }: { children: ReactNode }) {
     customer.state.trim().toLowerCase().includes('paraná') ||
     customer.state.trim().toLowerCase().includes('parana');
 
-  const shippingCents = (!isPickup && isParana) ? 2700 : 0;
+  const shippingCents = isPickup ? 0 : isParana ? 2700 : customShippingCents;
   const totalCents = Math.max(0, subtotalCents - discountCents + shippingCents);
+
+  // WhatsApp shipping quote builder
+  const generateShippingQuoteWhatsAppUrl = () => {
+    const phoneNumber = '5544997303797';
+    let msg = `🌸 *CONSULTA DE FRETE — Adli Lima Cosméticos* 🌸\n\n`;
+    msg += `Olá! Gostaria de consultar o valor do frete para o meu CEP/endereço antes de realizar o pagamento:\n\n`;
+    msg += `👤 *Cliente:* ${customer.name || 'Não informado'}\n`;
+    msg += `📍 *Destino:* ${customer.city || 'Minha Cidade'} - ${customer.state || 'UF'}\n`;
+    if (customer.address) {
+      msg += `🏠 *Endereço:* ${customer.address}\n`;
+    }
+    if (customer.locationUrl) {
+      msg += `📍 *Localização GPS:* ${customer.locationUrl}\n`;
+    }
+    msg += `\n🛒 *ITENS NA SACOLA:*\n`;
+    items.forEach((item) => {
+      msg += `• ${item.quantity}x ${item.product.name}\n`;
+    });
+    msg += `\nQual seria o valor do frete para essa entrega? Aguardo o valor para somar ao pedido e concluir o pagamento. Obrigada! ✨`;
+
+    return `https://wa.me/${phoneNumber}?text=${encodeURIComponent(msg)}`;
+  };
 
   // WhatsApp message builder
   const generateWhatsAppUrl = () => {
@@ -326,6 +367,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
     } else if (isParana) {
       msg += `🚚 Frete Fixo (Paraná): R$ 27,00\n`;
       msg += `*TOTAL ESTIMADO: R$ ${(totalCents / 100).toFixed(2).replace('.', ',')}*\n`;
+    } else if (customShippingCents > 0) {
+      msg += `🚚 Frete Consultado: R$ ${(customShippingCents / 100).toFixed(2).replace('.', ',')}\n`;
+      msg += `*TOTAL: R$ ${(totalCents / 100).toFixed(2).replace('.', ',')}*\n`;
     } else {
       msg += `🚚 Frete (Demais Estados): A calcular via WhatsApp\n`;
       msg += `*TOTAL DOS PRODUTOS: R$ ${(totalCents / 100).toFixed(2).replace('.', ',')}*\n`;
@@ -355,6 +399,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
         removeCoupon,
         discountCents,
         shippingCents,
+        customShippingCents,
+        setCustomShippingCents,
         totalCents,
         isParana,
         storeSettings,
@@ -362,6 +408,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         customer,
         setCustomer,
         generateWhatsAppUrl,
+        generateShippingQuoteWhatsAppUrl,
       }}
     >
       {children}
