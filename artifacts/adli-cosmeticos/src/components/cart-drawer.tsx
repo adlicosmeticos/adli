@@ -3,6 +3,7 @@ import {
   Check,
   ChevronRight,
   Compass,
+  CreditCard,
   MapPin,
   Minus,
   Plus,
@@ -16,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useCart } from '@/lib/cart-context';
 import { formatPrice } from '@/lib/products-data';
+import PaymentModal from '@/components/payment-modal';
 
 export default function CartDrawer() {
   const {
@@ -45,6 +47,7 @@ export default function CartDrawer() {
   const [validationError, setValidationError] = useState('');
   const [gettingLocation, setGettingLocation] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
+  const [isPaymentOpen, setIsPaymentOpen] = useState(false);
 
   if (!isOpen) return null;
 
@@ -94,8 +97,7 @@ export default function CartDrawer() {
       return;
     }
     setValidationError('');
-    const url = generateWhatsAppUrl();
-    window.open(url, '_blank');
+    setIsPaymentOpen(true);
   }
 
   return (
@@ -511,18 +513,33 @@ export default function CartDrawer() {
 
               <button
                 onClick={handleCheckout}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#966960] py-3.5 text-xs font-bold tracking-wider text-white shadow-md transition hover:bg-[#B68475]"
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#966960] py-3.5 text-xs font-bold tracking-wider text-white shadow-md transition hover:bg-[#B68475] active:scale-[0.99]"
               >
-                CONFIRMAR PEDIDO NO WHATSAPP <ChevronRight size={16} />
+                <CreditCard size={16} /> PAGAR {formatPrice(totalCents)} <ChevronRight size={16} />
               </button>
 
               <p className="text-center text-[10px] text-[#91857a]">
-                Você será direcionada para o WhatsApp com todos os itens já organizados.
+                Pague via Cartão/Boleto (Mercado Pago) ou Pix.
               </p>
             </div>
           )}
         </div>
       </div>
+
+      {/* Modal / Tela de Pagamento */}
+      <PaymentModal
+        isOpen={isPaymentOpen}
+        onClose={() => setIsPaymentOpen(false)}
+        items={items}
+        subtotalCents={subtotalCents}
+        discountCents={discountCents}
+        shippingCents={shippingCents}
+        totalCents={totalCents}
+        appliedCoupon={appliedCoupon}
+        customer={customer}
+        isParana={isParana}
+        generateWhatsAppUrl={generateWhatsAppUrl}
+      />
     </div>
   );
 }
