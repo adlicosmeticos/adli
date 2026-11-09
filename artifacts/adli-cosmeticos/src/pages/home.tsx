@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   ArrowRight,
+  Check,
   Heart,
   Instagram,
   Lock,
@@ -12,6 +13,7 @@ import {
   RefreshCw,
   Shield,
   ShieldCheck,
+  ShoppingBag,
   Sparkles,
   Star,
   Truck,
@@ -61,6 +63,13 @@ function StarRating({ rating = 5, reviews }: { rating?: number; reviews?: number
 
 function ProductCard({ product }: { product: Product }) {
   const { addItem } = useCart();
+  const [justAdded, setJustAdded] = useState(false);
+
+  const handleAdd = () => {
+    addItem(product);
+    setJustAdded(true);
+    setTimeout(() => setJustAdded(false), 1500);
+  };
 
   return (
     <div className="group flex flex-col overflow-hidden rounded-2xl border border-[#DCC4BD]/60 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-[#B68475]/80">
@@ -107,11 +116,24 @@ function ProductCard({ product }: { product: Product }) {
           </p>
           <button
             type="button"
-            onClick={() => addItem(product)}
-            className="mt-2.5 sm:mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl bg-[#966960] px-2.5 py-2 sm:px-4 sm:py-2.5 text-[10px] sm:text-[11px] font-bold tracking-[.06em] text-white transition hover:bg-[#B68475] active:scale-95 shadow-sm"
+            onClick={handleAdd}
+            className={`mt-2.5 sm:mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl px-2.5 py-2 sm:px-4 sm:py-2.5 text-[10px] sm:text-[11px] font-bold tracking-[.06em] text-white transition active:scale-95 shadow-sm ${
+              justAdded
+                ? 'bg-[#5b8a6a] hover:bg-[#4d7559]'
+                : 'bg-[#966960] hover:bg-[#B68475]'
+            }`}
           >
-            <Package size={13} />
-            <span>ADICIONAR</span>
+            {justAdded ? (
+              <>
+                <Check size={13} />
+                <span>ADICIONADO!</span>
+              </>
+            ) : (
+              <>
+                <Package size={13} />
+                <span>ADICIONAR</span>
+              </>
+            )}
           </button>
         </div>
       </div>
@@ -222,6 +244,21 @@ export default function Home() {
               <Instagram size={18} />
             </a>
 
+            {/* Header Bag Button */}
+            <button
+              type="button"
+              onClick={() => setIsOpen(true)}
+              className="relative flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full border border-[#DCC4BD] text-[#614331] transition hover:border-[#966960] hover:text-[#966960] active:scale-95"
+              aria-label="Abrir Sacola"
+            >
+              <ShoppingBag size={18} />
+              {totalItems > 0 && (
+                <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#966960] text-[10px] font-bold text-white shadow-sm">
+                  {totalItems}
+                </span>
+              )}
+            </button>
+
             <a
               href={whatsappUrl}
               target="_blank"
@@ -252,6 +289,16 @@ export default function Home() {
               <a href="#categorias" onClick={() => setMenuOpen(false)} className="text-xs tracking-[.15em] text-[#614331]">CATEGORIAS</a>
               <a href="#sobre" onClick={() => setMenuOpen(false)} className="text-xs tracking-[.15em] text-[#614331]">SOBRE NÓS</a>
               <a href="#contato" onClick={() => setMenuOpen(false)} className="text-xs tracking-[.15em] text-[#614331]">CONTATO</a>
+              <button
+                type="button"
+                onClick={() => {
+                  setMenuOpen(false);
+                  setIsOpen(true);
+                }}
+                className="flex items-center gap-2 text-xs tracking-[.15em] text-[#614331] font-semibold text-left"
+              >
+                <ShoppingBag size={15} /> VER SACOLA {totalItems > 0 && `(${totalItems})`}
+              </button>
               <a
                 href={whatsappUrl}
                 target="_blank"
