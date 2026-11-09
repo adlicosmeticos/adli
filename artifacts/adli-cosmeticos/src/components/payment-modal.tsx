@@ -16,9 +16,12 @@ import {
   AlertCircle,
   CheckCircle2,
   Calculator,
+  Loader2,
+  Truck,
 } from 'lucide-react';
 import type { CartItem, CustomerInfo, Coupon } from '@/lib/cart-context';
 import { formatPrice, parseToCents } from '@/lib/products-data';
+import { saveReceipt } from '@/lib/receipt-service';
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -55,6 +58,7 @@ export default function PaymentModal({
   const [copiedPix, setCopiedPix] = useState(false);
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const [shippingInput, setShippingInput] = useState(
     customShippingCents > 0 ? (customShippingCents / 100).toFixed(2).replace('.', ',') : ''
   );
@@ -121,74 +125,103 @@ export default function PaymentModal({
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   }
 
-  function handleSendWhatsApp() {
-    if (!receiptFile) return;
+  async function handleSendWhatsApp() {
+    if (!receiptFile || isUploading) return;
 
-    const phoneNumber = '5544997303797';
-    let msg = `🌸 *NOVO PEDIDO — PAGAMENTO REALIZADO* 🌸\n`;
-    msg += `*Adli Lima Cosméticos*\n\n`;
+    setIsUploading(true);
 
-    msg += `✅ *STATUS:* PAGAMENTO EFETUADO COM SUCESSO\n`;
-    msg += `📎 *COMPROVANTE:* Arquivo "${receiptFile.name}" pronto para conferência\n`;
-    msg += `\n`;
+    try {
+      // Faz upload do comprovante e gera o link direto
+      const result = await saveReceipt(receiptFile, {
+        customerName: customer.name,
+        customerCity: customer.city ? `${customer.city} - ${customer.state || 'PR'}` : undefined,
+        totalCents,
+      });
 
-    msg += `👤 *Cliente:* ${customer.name || 'Não informado'}\n`;
-    msg += `📍 *Cidade / Estado:* ${customer.city || 'Paranavaí'} - ${customer.state || 'PR'}\n`;
+      const phoneNumber = '5544997303797';
+      let msg = `🌸 *NOVO PEDIDO — PAGAMENTO REALIZADO* 🌸\n`;
+      msg += `*Adli Lima Cosméticos*\n\n`;
 
-    if (customer.deliveryMethod === 'pickup') {
-      msg += `📦 *Modalidade:* 🏪 Retirada no Balcão da Loja (Grátis)\n`;
-    } else {
-      msg += `📦 *Modalidade:* 🚚 Entrega no Endereço\n`;
-      if (customer.address) {
-        msg += `🏠 *Endereço:* ${customer.address}\n`;
+      msg += `✅ *STATUS:* PAGAMENTO EFETUADO COM SUCESSO\n`;
+      msg += `📎 *COMPROVANTE DE PAGAMENTO:*\n`;
+      msg += `👉 Clique no link para conferir o print:\n`;
+      msg += `${result.viewerUrl}\n`;
+      if (result.directUrl) {
+        msg += `(Link direto: ${result.directUrl})\n`;
       }
-      if (customer.locationUrl) {
-        msg += `📍 *Localização GPS:* ${customer.locationUrl}\n`;
+      msg += `\n`;
+
+      msg += `👤 *Cliente:* ${customer.name || 'Não informado'}\n`;
+      msg += `📍 *Cidade / Estado:* ${customer.city || 'Paranavaí'} - ${customer.state || 'PR'}\n`;
+
+      if (customer.deliveryMethod === 'pickup') {
+        msg += `📦 *Modalidade:* 🏪 Retirada no Balcão da Loja (Grátis)\n`;
+      } else {
+        msg += `📦 *Modalidade:* 🚚 Entrega no Endereço\n`;
+        if (customer.address) {
+          msg += `🏠 *Endereço:* ${customer.address}\n`;
+        }
+        if (customer.locationUrl) {
+          msg += `📍 *Localização GPS:* ${customer.locationUrl}\n`;
+        }
       }
+
+      if (customer.notes) {
+        msg += `📝 *Observação:* ${customer.notes}\n`;
+      }
+
+      msg += `\n🛒 *ITENS DO PEDIDO:*\n`;
+      items.forEach((item) => {
+        const itemTotal = (item.product.price_cents * item.quantity) / 100;
+        msg += `• ${item.quantity}x ${item.product.name} — R$ ${itemTotal.toFixed(2).replace('.', ',')}\n`;
+      });
+
+      msg += `\n───────────────\n`;
+      msg += `Subtotal: ${formatPrice(subtotalCents)}\n`;
+
+      if (appliedCoupon && discountCents > 0) {
+        const descVal =
+          appliedCoupon.discountType === 'percentage'
+            ? `${appliedCoupon.discountValue}%`
+            : `R$ ${(appliedCoupon.discountValue / 100).toFixed(2).replace('.', ',')}`;
+        msg += `🎟️ Cupom (${appliedCoupon.code}): -${formatPrice(discountCents)} (${descVal})\n`;
+      }
+
+      const isPendingShipping = !isParana && customer.deliveryMethod !== 'pickup' && customShippingCents <= 0;
+
+      if (customer.deliveryMethod === 'pickup') {
+        msg += `🚚 Frete: Grátis (Retirada)\n`;
+      } else if (isParana) {
+        msg += `🚚 Frete Fixo (PR): R$ 27,00\n`;
+      } else if (customShippingCents > 0) {
+        msg += `🚚 Frete Consultado: ${formatPrice(customShippingCents)}\n`;
+      } else {
+        msg += `🚚 Frete (${customer.state || 'Demais Estados'}): PENDENTE / A COMBINAR NO WHATSAPP\n`;
+        msg += `⚠️ *Aviso Frete:* Valor pago referente aos produtos. O frete será acertado para liberação do envio.\n`;
+      }
+
+      if (isPendingShipping) {
+        msg += `💰 *VALOR PAGO AGORA (APENAS PRODUTOS): ${formatPrice(totalCents)}*\n`;
+        msg += `📦 *FRETE:* A acertar com a loja para envio\n`;
+      } else {
+        msg += `💰 *VALOR TOTAL PAGO: ${formatPrice(totalCents)}*\n`;
+      }
+      msg += `───────────────\n\n`;
+
+      if (isPendingShipping) {
+        msg += `Olá! Já realizei o pagamento dos meus produtos e o comprovante está anexado no link acima. Aguardo o cálculo do frete para realizarmos o acerto e envio dos meus produtos! ✨`;
+      } else {
+        msg += `Olá! Já realizei o pagamento do meu pedido e o comprovante está anexado no link acima para conferência. Aguardo a confirmação da preparação e envio dos meus produtos! ✨`;
+      }
+
+      const url = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(msg)}`;
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } catch (err) {
+      console.error('Erro ao processar comprovante:', err);
+      alert('Não foi possível processar o envio do comprovante. Tente novamente.');
+    } finally {
+      setIsUploading(false);
     }
-
-    if (customer.notes) {
-      msg += `📝 *Observação:* ${customer.notes}\n`;
-    }
-
-    msg += `\n🛒 *ITENS DO PEDIDO:*\n`;
-    items.forEach((item) => {
-      const itemTotal = (item.product.price_cents * item.quantity) / 100;
-      msg += `• ${item.quantity}x ${item.product.name} — R$ ${itemTotal.toFixed(2).replace('.', ',')}\n`;
-    });
-
-    msg += `\n───────────────\n`;
-    msg += `Subtotal: ${formatPrice(subtotalCents)}\n`;
-
-    if (appliedCoupon && discountCents > 0) {
-      const descVal =
-        appliedCoupon.discountType === 'percentage'
-          ? `${appliedCoupon.discountValue}%`
-          : `R$ ${(appliedCoupon.discountValue / 100).toFixed(2).replace('.', ',')}`;
-      msg += `🎟️ Cupom (${appliedCoupon.code}): -${formatPrice(discountCents)} (${descVal})\n`;
-    }
-
-    if (customer.deliveryMethod === 'pickup') {
-      msg += `🚚 Frete: Grátis (Retirada)\n`;
-    } else if (isParana) {
-      msg += `🚚 Frete Fixo (PR): R$ 27,00\n`;
-    } else if (customShippingCents > 0) {
-      msg += `🚚 Frete Consultado: ${formatPrice(customShippingCents)}\n`;
-    } else {
-      msg += `🚚 Frete (Demais Estados): A combinar\n`;
-    }
-
-    msg += `💰 *VALOR TOTAL PAGO: ${formatPrice(totalCents)}*\n`;
-    msg += `───────────────\n\n`;
-
-    if (receiptFile) {
-      msg += `Olá! Já realizei o pagamento do meu pedido e estou enviando o comprovante em anexo nesta conversa. Aguardo a confirmação da preparação e envio dos meus produtos! ✨`;
-    } else {
-      msg += `Olá! Já realizei o pagamento do meu pedido e segue a confirmação para envio dos produtos! ✨`;
-    }
-
-    const url = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(msg)}`;
-    window.open(url, '_blank', 'noopener,noreferrer');
   }
 
   return (
@@ -220,6 +253,45 @@ export default function PaymentModal({
 
         {/* Content Body */}
         <div className="max-h-[calc(85vh-120px)] overflow-y-auto px-5 py-4 space-y-4">
+          {/* Alerta de Frete Pendente (Demais Estados fora do PR) */}
+          {!isParana && customer.deliveryMethod !== 'pickup' && customShippingCents <= 0 && (
+            <div className="rounded-2xl border-2 border-amber-300 bg-amber-50/90 p-4 shadow-xs space-y-3 animate-in fade-in">
+              <div className="flex items-start gap-2.5">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-500 text-white shadow-xs">
+                  <Truck size={18} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 font-bold text-amber-900 text-xs">
+                    <AlertCircle size={15} className="text-amber-600 shrink-0" />
+                    <span>Atenção: Frete para o seu estado ainda não calculado</span>
+                  </div>
+                  <p className="text-[11px] leading-relaxed text-amber-800 mt-1">
+                    Identificamos que seu destino é em{' '}
+                    <strong>
+                      {customer.city || 'sua cidade'} - {customer.state || 'fora do PR'}
+                    </strong>
+                    . O valor abaixo contempla <strong>apenas os produtos</strong>. Para o envio ser liberado, o frete da sua região precisa ser calculado e acertado com nossa equipe.
+                  </p>
+                </div>
+              </div>
+
+              <div className="pt-1">
+                <a
+                  href={generateShippingQuoteWhatsAppUrl()}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center justify-center gap-2 rounded-xl bg-[#25D366] px-4 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-[#20ba59] transition text-center"
+                >
+                  <MessageCircle size={15} />
+                  <span>Consultar Frete no WhatsApp Agora (Recomendado)</span>
+                </a>
+              </div>
+              <p className="text-[10px] text-amber-700 italic text-center">
+                * Se preferir, continue o pagamento dos produtos agora e acerte o frete em seguida no WhatsApp.
+              </p>
+            </div>
+          )}
+
           {/* Card Resumo do Pedido */}
           <div className="rounded-xl border border-[#DCC4BD] bg-white p-4 shadow-xs">
             <div className="flex items-center gap-2 border-b border-[#F0E4E0] pb-2 text-xs font-bold text-[#614331]">
@@ -342,9 +414,20 @@ export default function PaymentModal({
                 </div>
               )}
 
-              {/* Valor Total a Pagar com o frete somado */}
+              {/* Valor Total a Pagar com indicação se o frete é pendente */}
               <div className="flex items-center justify-between rounded-lg bg-[#ECDDD8]/60 px-3 py-2 mt-2 border border-[#DCC4BD]">
-                <span className="text-xs font-bold text-[#614331]">Valor Total a Pagar:</span>
+                <div>
+                  <span className="block text-xs font-bold text-[#614331]">
+                    {!isParana && customer.deliveryMethod !== 'pickup' && customShippingCents <= 0
+                      ? 'Total a Pagar Agora (Apenas Produtos):'
+                      : 'Valor Total a Pagar:'}
+                  </span>
+                  {!isParana && customer.deliveryMethod !== 'pickup' && customShippingCents <= 0 && (
+                    <span className="text-[10px] font-semibold text-amber-700">
+                      + Frete a acertar no WhatsApp
+                    </span>
+                  )}
+                </div>
                 <span className="text-base font-extrabold text-[#966960]">
                   {formatPrice(totalCents)}
                 </span>
@@ -551,20 +634,33 @@ export default function PaymentModal({
               <button
                 type="button"
                 onClick={handleSendWhatsApp}
-                disabled={!receiptFile}
+                disabled={!receiptFile || isUploading}
                 className={`flex w-full items-center justify-center gap-2 rounded-xl py-3 px-4 text-xs font-bold transition ${
-                  receiptFile
+                  receiptFile && !isUploading
                     ? 'bg-[#25D366] text-white shadow-md hover:bg-[#20ba59] active:scale-[0.99] cursor-pointer'
                     : 'bg-[#e2dcda] text-[#9c8f8b] cursor-not-allowed shadow-none'
                 }`}
               >
-                <MessageCircle size={16} />
-                <span>CONFIRMAR PEDIDO E PAGAMENTO NO WHATSAPP</span>
+                {isUploading ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    <span>PREPARANDO COMPROVANTE E LINK...</span>
+                  </>
+                ) : (
+                  <>
+                    <MessageCircle size={16} />
+                    <span>CONFIRMAR PEDIDO E PAGAMENTO NO WHATSAPP</span>
+                  </>
+                )}
               </button>
               <p className="mt-1.5 text-center text-[10px] leading-snug">
-                {receiptFile ? (
+                {isUploading ? (
+                  <span className="font-semibold text-[#966960] animate-pulse">
+                    ⏳ Enviando imagem e gerando link seguro para o WhatsApp...
+                  </span>
+                ) : receiptFile ? (
                   <span className="font-semibold text-green-700">
-                    ✨ Comprovante anexado! Ao abrir o WhatsApp, envie o print/PDF na conversa para confirmação imediata.
+                    ✨ Comprovante pronto! Ao clicar, geramos o link direto para você e o lojista conferirem o print.
                   </span>
                 ) : (
                   <span className="text-[#927C75]">

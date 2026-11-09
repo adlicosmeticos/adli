@@ -18,8 +18,13 @@ import {
   Truck,
   Upload,
   X,
+  FileCheck,
+  ExternalLink,
+  FileText,
+  RefreshCw,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { listReceipts, type ReceiptData } from '@/lib/receipt-service';
 import {
   type Product,
   categoryList,
@@ -56,7 +61,9 @@ export default function AdminPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState('');
 
-  const [activeTab, setActiveTab] = useState<'products' | 'customize' | 'coupons'>('products');
+  const [activeTab, setActiveTab] = useState<'products' | 'customize' | 'coupons' | 'receipts'>('products');
+  const [receiptsList, setReceiptsList] = useState<ReceiptData[]>([]);
+  const [loadingReceipts, setLoadingReceipts] = useState(false);
 
   /* Coupons State */
   const [coupons, setCoupons] = useState<Coupon[]>(() => {
@@ -173,6 +180,24 @@ export default function AdminPage() {
   useEffect(() => {
     if (isLoggedIn) loadData();
   }, [isLoggedIn]);
+
+  async function loadReceipts() {
+    setLoadingReceipts(true);
+    try {
+      const data = await listReceipts();
+      setReceiptsList(data);
+    } catch {
+      // ignore
+    } finally {
+      setLoadingReceipts(false);
+    }
+  }
+
+  useEffect(() => {
+    if (isLoggedIn && activeTab === 'receipts') {
+      loadReceipts();
+    }
+  }, [isLoggedIn, activeTab]);
 
   /* ── Save Coupons Helper ───────────────────────── */
   async function saveCoupons(updatedCoupons: Coupon[]) {
@@ -516,6 +541,16 @@ export default function AdminPage() {
               }`}
             >
               <Star size={16} /> Cupons de Desconto ({coupons.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('receipts')}
+              className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-xs font-bold transition ${
+                activeTab === 'receipts'
+                  ? 'bg-[#966960] text-white shadow-sm'
+                  : 'bg-white text-[#614331] border border-[#DCC4BD] hover:bg-[#ECDDD8]'
+              }`}
+            >
+              <FileCheck size={16} /> Comprovantes Recebidos
             </button>
           </div>
 
@@ -1069,6 +1104,105 @@ export default function AdminPage() {
                 <div className="py-12 text-center text-xs text-[#91857a]">
                   Nenhum cupom cadastrado no momento.
                 </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── ABA 4: COMPROVANTES RECEBIDOS ─────────── */}
+        {activeTab === 'receipts' && (
+          <div className="max-w-[1100px] space-y-6">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <h1 className="text-xl font-bold text-[#443a35]">Comprovantes Recebidos</h1>
+                <p className="mt-0.5 text-xs text-[#91857a]">
+                  Confira os prints e PDFs enviados pelos clientes no ato do pagamento
+                </p>
+              </div>
+
+              <button
+                onClick={loadReceipts}
+                disabled={loadingReceipts}
+                className="flex items-center gap-2 rounded-xl bg-white border border-[#DCC4BD] px-4 py-2.5 text-xs font-bold text-[#614331] shadow-xs hover:bg-[#ECDDD8] transition"
+              >
+                <RefreshCw size={14} className={loadingReceipts ? 'animate-spin' : ''} />
+                <span>Atualizar Lista</span>
+              </button>
+            </div>
+
+            <div className="overflow-hidden rounded-2xl border border-[#e4dbcf] bg-white shadow-sm">
+              {loadingReceipts ? (
+                <div className="flex flex-col items-center justify-center py-16 space-y-3">
+                  <Loader2 className="animate-spin text-[#966960]" size={32} />
+                  <p className="text-xs font-semibold text-[#614331]">Carregando comprovantes...</p>
+                </div>
+              ) : receiptsList.length === 0 ? (
+                <div className="py-16 text-center space-y-2">
+                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#FAF5F0] text-[#966960]">
+                    <FileCheck size={24} />
+                  </div>
+                  <p className="text-sm font-bold text-[#443a35]">Nenhum comprovante recebido ainda</p>
+                  <p className="text-xs text-[#91857a] max-w-sm mx-auto">
+                    Assim que seus clientes anexarem o print ou PDF na tela de pagamento, eles ficarão salvos aqui e com link no WhatsApp.
+                  </p>
+                </div>
+              ) : (
+                <table className="w-full text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-[#f0e8df] bg-[#faf8f4]">
+                      <th className="px-4 py-3.5 text-[10px] font-bold tracking-wider text-[#91857a]">DATA / HORA</th>
+                      <th className="px-4 py-3.5 text-[10px] font-bold tracking-wider text-[#91857a]">CLIENTE</th>
+                      <th className="px-4 py-3.5 text-[10px] font-bold tracking-wider text-[#91857a]">VALOR TOTAL</th>
+                      <th className="hidden px-4 py-3.5 text-[10px] font-bold tracking-wider text-[#91857a] sm:table-cell">ARQUIVO</th>
+                      <th className="px-4 py-3.5 text-right text-[10px] font-bold tracking-wider text-[#91857a]">VER PRINT</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#f5efe6]">
+                    {receiptsList.map((rec) => {
+                      const d = new Date(rec.createdAt);
+                      const formattedDate = d.toLocaleString('pt-BR', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      });
+
+                      return (
+                        <tr key={rec.id} className="transition hover:bg-[#fdfbf7]">
+                          <td className="px-4 py-3.5 text-xs text-[#665b54]">
+                            {formattedDate}
+                          </td>
+                          <td className="px-4 py-3.5">
+                            <span className="block font-semibold text-[#443a35] text-xs">
+                              {rec.customerName || 'Cliente'}
+                            </span>
+                            {rec.customerCity && (
+                              <span className="text-[10px] text-[#91857a]">{rec.customerCity}</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3.5 font-bold text-[#16a34a] text-xs">
+                            {rec.totalCents ? formatPrice(rec.totalCents) : '—'}
+                          </td>
+                          <td className="hidden px-4 py-3.5 text-xs text-[#91857a] sm:table-cell truncate max-w-[180px]">
+                            {rec.fileName}
+                          </td>
+                          <td className="px-4 py-3.5 text-right">
+                            <a
+                              href={`/comprovante?id=${rec.id}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1.5 rounded-xl bg-[#966960] px-3.5 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-[#B68475] transition"
+                            >
+                              <ExternalLink size={13} />
+                              <span>Conferir</span>
+                            </a>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               )}
             </div>
           </div>

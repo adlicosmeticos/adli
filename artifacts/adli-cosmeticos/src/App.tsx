@@ -3,6 +3,7 @@ import Home from '@/pages/home';
 import AdminPage from '@/pages/admin';
 import PolicyPage from '@/pages/policy';
 import CheckoutPage from '@/pages/checkout';
+import ReceiptViewerPage from '@/pages/receipt-viewer';
 import NotFound from '@/pages/not-found';
 import { CartProvider } from '@/lib/cart-context';
 import CartDrawer from '@/components/cart-drawer';
@@ -14,6 +15,8 @@ export default function App() {
         <Route path="/" component={Home} />
         <Route path="/pagamento" component={CheckoutPage} />
         <Route path="/checkout" component={CheckoutPage} />
+        <Route path="/comprovante" component={ReceiptViewerPage} />
+        <Route path="/comprovante/:id" component={ReceiptViewerPage} />
         <Route path="/admin" component={AdminPage} />
         <Route path="/fale-conosco">
           {() => <PolicyPage initialTab="fale-conosco" />}

@@ -152,3 +152,17 @@ ON CONFLICT (slug) DO NOTHING;
 INSERT INTO store_settings (key, value)
 VALUES ('initial_catalog_v1', 'seeded')
 ON CONFLICT (key) DO NOTHING;
+
+-- 7. Bucket de Armazenamento para Comprovantes de Pagamento (Opcional)
+-- Execute para permitir upload de arquivos diretamente no Supabase Storage:
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('comprovantes', 'comprovantes', true)
+ON CONFLICT (id) DO NOTHING;
+
+CREATE POLICY "Permitir upload publico em comprovantes"
+ON storage.objects FOR INSERT
+WITH CHECK (bucket_id = 'comprovantes');
+
+CREATE POLICY "Permitir leitura publica em comprovantes"
+ON storage.objects FOR SELECT
+USING (bucket_id = 'comprovantes');
