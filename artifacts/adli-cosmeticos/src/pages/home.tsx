@@ -93,6 +93,11 @@ function ProductCard({ product }: { product: Product }) {
         <h3 className="mt-1 line-clamp-2 text-xs sm:text-sm font-medium leading-snug text-[#614331] min-h-[2rem]">
           {product.name}
         </h3>
+        {product.description && (
+          <p className="mt-1 line-clamp-2 text-[10px] sm:text-[11px] leading-relaxed text-[#927C75]">
+            {product.description}
+          </p>
+        )}
         <div className="mt-1 sm:mt-2">
           <StarRating rating={5} reviews={Math.floor(Math.random() * 80) + 50} />
         </div>
