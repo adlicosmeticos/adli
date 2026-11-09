@@ -94,24 +94,26 @@ function ProductCard({ product }: { product: Product }) {
           {product.name}
         </h3>
         {product.description && (
-          <p className="mt-1 line-clamp-2 text-[10px] sm:text-[11px] leading-relaxed text-[#927C75]">
+          <p className="mt-1 text-[10px] sm:text-[11px] leading-relaxed text-[#927C75]">
             {product.description}
           </p>
         )}
-        <div className="mt-1 sm:mt-2">
-          <StarRating rating={5} reviews={Math.floor(Math.random() * 80) + 50} />
+        <div className="mt-auto pt-2">
+          <div>
+            <StarRating rating={5} reviews={Math.floor(Math.random() * 80) + 50} />
+          </div>
+          <p className="mt-1 sm:mt-2 text-sm sm:text-lg font-bold text-[#614331]">
+            {formatPrice(product.price_cents)}
+          </p>
+          <button
+            type="button"
+            onClick={() => addItem(product)}
+            className="mt-2.5 sm:mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl bg-[#966960] px-2.5 py-2 sm:px-4 sm:py-2.5 text-[10px] sm:text-[11px] font-bold tracking-[.06em] text-white transition hover:bg-[#B68475] active:scale-95 shadow-sm"
+          >
+            <Package size={13} />
+            <span>ADICIONAR</span>
+          </button>
         </div>
-        <p className="mt-1 sm:mt-2 text-sm sm:text-lg font-bold text-[#614331]">
-          {formatPrice(product.price_cents)}
-        </p>
-        <button
-          type="button"
-          onClick={() => addItem(product)}
-          className="mt-2.5 sm:mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl bg-[#966960] px-2.5 py-2 sm:px-4 sm:py-2.5 text-[10px] sm:text-[11px] font-bold tracking-[.06em] text-white transition hover:bg-[#B68475] active:scale-95 shadow-sm"
-        >
-          <Package size={13} />
-          <span>ADICIONAR</span>
-        </button>
       </div>
     </div>
   );
